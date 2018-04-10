@@ -6,8 +6,8 @@
 #define XYFS_XYFS_H
 
 #define MAX_FILENAME_LENGTH 100
-#define IS_FILE  0
-#define IS_DIRECTORY 1
+#define FILE_NODE  0
+#define DERICTORY_NODE 1
 #define SUCCESS 0
 #define MAX_PATH_LENGTH 4096
 

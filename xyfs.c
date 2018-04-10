@@ -51,7 +51,7 @@ int ramdisk_read(const char *path, char *buf, size_t size, off_t offset, struct 
         return -ENOENT;
     }
 
-    if (node->type != IS_FILE) {
+    if (node->type != FILE_NODE) {
         return -EISDIR;
     }
 
@@ -75,7 +75,7 @@ int ramdisk_write(const char *path, const char *buf, size_t size, off_t offset, 
         return -ENOENT;
     }
 
-    if (node->type != IS_FILE) {
+    if (node->type != FILE_NODE) {
         return -EISDIR;
     }
 
@@ -172,7 +172,7 @@ int ramdisk_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
     new_node->parent_dir = node;
     new_node->_map = hashmap_new();
     new_node->content = NULL;
-    new_node->type = IS_FILE;
+    new_node->type = FILE_NODE;
 
     if (node->_map == NULL) {
         node->_map = hashmap_new();
@@ -228,7 +228,7 @@ int ramdisk_mkdir(const char *path, mode_t mode) {
 
     new_node->parent_dir = node;
     new_node->_map = hashmap_new();
-    new_node->type = IS_DIRECTORY;
+    new_node->type = DERICTORY_NODE;
 
 
     if (node->_map == NULL) {
@@ -361,10 +361,9 @@ void init_root() {
     root->name = malloc(MAX_FILENAME_LENGTH * sizeof(char));
     strcpy(root->name, "/");
 
-    long size_of_dir = sizeof(Node) + sizeof(struct stat);
-
     root->st->st_mode = S_IFDIR | 0755;
     root->st->st_nlink = 2;
+    long size_of_dir = sizeof(Node) + sizeof(struct stat);
     root->st->st_size = size_of_dir;
     time_t current_time;
     time(&current_time);
@@ -373,7 +372,7 @@ void init_root() {
     root->parent_dir = NULL;
     root->_map = hashmap_new();
     root->content = NULL;
-    root->type = IS_DIRECTORY;
+    root->type = DERICTORY_NODE;
 
 }
 
