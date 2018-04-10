@@ -16,4 +16,4 @@ link_libraries(
         dl
 )
 
-add_executable(xyfs ramdisk.c hashmap.h hashmap.c)
+add_executable(xyfs xyfs.c hashmap.h hashmap.c xyfs.h)

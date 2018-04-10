@@ -2,14 +2,16 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <fuse.h>
 #include <errno.h>
 #include <time.h>
 #include <limits.h>
 #include <stdlib.h>
 #include "hashmap.h"
 
-#define FILENAME_SIZE 100
+#include <fuse.h>
+
+#include "xyfs.h"
+
 
 long fs_size = 0;
 long available_size = 0;
@@ -18,15 +20,6 @@ char* fs_path;
 int IS_FILE = 0;
 int IS_DIRECTORY= 1;
 
-typedef struct node
-{
-	char* name;
-	int type;
-	struct stat* st;
-	struct node* parent_directory;
-	char* content;
-	map_t _map;
-}Node;
 
 Node *root;
 
