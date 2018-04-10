@@ -13,87 +13,69 @@
 
 long fs_size = 0;
 long available_size = 0;
-int load_fs = 0;
 char* fs_path;
 
 int IS_FILE = 0;
 int IS_DIRECTORY= 1;
 
-/*
-	# Data Structure to store filesystem objects
-*/
-typedef struct fs_data_structure
+typedef struct node
 {
 	char* fs_object_name;
 	int fs_object_type;
 	struct stat* fs_object_details;
 
-	struct fs_data_structure* parent_directory;
+	struct node* parent_directory;
 
-	// if fs_object is a file
 	char* fs_object_content;
 
-	// if fs_object is a directory
-	map_t fs_object_map; // map of directories and files present in current directory
-}fs_object;
+	map_t fs_object_map;
+}Node;
 
-fs_object *root;
+Node *root;
 
-/*
-	# Checks if given path exists
-	# Returns pointer to fs_object if given path exists else return NULL
-*/
-fs_object *get_fs_object(const char *path)
+Node *get_fs_object(const char *path)
 {
-    printf("Get fs_object at path : %s\n", path);
+    printf("Get Node at path : %s\n", path);
     int path_length = strlen(path);
 	char tmp_path[path_length];
 	strcpy(tmp_path, path);
 	char* path_token;
-	fs_object* fs_object_ptr = NULL;
+	Node* node = NULL;
 	if(strcmp(path, "/") == 0)
 	{
-		fs_object_ptr = root;
+		node = root;
 	}
 	else
 	{
 		path_token = strtok(tmp_path,"/");
-		fs_object_ptr = root;
-		fs_object* fs_object_tmp;
+		node = root;
+		Node* fs_object_tmp;
 		while(path_token != NULL)
 		{
-            int msg = hashmap_get(fs_object_ptr->fs_object_map, path_token, (void**)(&fs_object_tmp));
+            int msg = hashmap_get(node->fs_object_map, path_token, (void**)(&fs_object_tmp));
             if(msg == MAP_OK)
             {
-                fs_object_ptr = fs_object_tmp;
+                node = fs_object_tmp;
 				path_token = strtok(NULL, "/");
             }
             else
             {
-                fs_object_ptr = NULL;
+                node = NULL;
                 break;
             }
         }
 	}
-    printf("Exit get fs_object function\n");
-	return fs_object_ptr;
+	return node;
 }
 
-/*
-	# Checks if given file exist
-	# Returns 0 if file exist else return error
-	# We do not need to actually open the file, just return 0 is enough
-*/
  int ramdisk_open(const char *path, struct fuse_file_info *fi)
 {
-    printf("ramdisk_open path : %s\n", path);
     int result = 0;
-    fs_object* fs_object_ptr = get_fs_object(path);
-    if (fs_object_ptr == NULL) 
+    Node* node = get_fs_object(path);
+    if (node == NULL)
     {
         result = -ENOENT;
     }
-    printf("Exit ramdisk_open\n");
     return result;
 }
 
@@ -102,21 +84,20 @@ fs_object *get_fs_object(const char *path)
 */
  int ramdisk_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-    printf("ramdisk_read path : %s\n", path);
     int result = 0;
-    fs_object *fs_object_ptr = get_fs_object(path);
-    if(fs_object_ptr != NULL)
+    Node *node = get_fs_object(path);
+    if(node != NULL)
     {
-        if(fs_object_ptr->fs_object_type == IS_FILE)
+        if(node->fs_object_type == IS_FILE)
         {
-            size_t content_size = fs_object_ptr->fs_object_details->st_size;
+            size_t content_size = node->fs_object_details->st_size;
             if(offset < content_size)
             {
                 if(offset + size > content_size)
                 {
                     size = content_size - offset;
                 }
-                memcpy(buf, fs_object_ptr->fs_object_content + offset, size);
+                memcpy(buf, node->fs_object_content + offset, size);
             }
             else
             {
@@ -134,7 +115,6 @@ fs_object *get_fs_object(const char *path)
     {
         result = -ENOENT;
     }
-    printf("Exit ramdisk_read\n");
     return result;
 }
 
@@ -143,31 +123,30 @@ fs_object *get_fs_object(const char *path)
 */
  int ramdisk_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-    printf("ramdisk_write path : %s\n", path);
     if(available_size < size)
     {
         return -ENOSPC;
     }
     int result = size;
-    fs_object *fs_object_ptr = get_fs_object(path);
-    if(fs_object_ptr != NULL)
+    Node *node = get_fs_object(path);
+    if(node != NULL)
     {
-        if(fs_object_ptr->fs_object_type == IS_FILE)
+        if(node->fs_object_type == IS_FILE)
         {
         	if(size > 0)
         	{
-        		size_t content_size = fs_object_ptr->fs_object_details->st_size;
+        		size_t content_size = node->fs_object_details->st_size;
 	        	if(content_size == 0) // write from the beginning of the file
 	            {
-	                fs_object_ptr->fs_object_content = (char *)malloc(sizeof(char) * size);
+	                node->fs_object_content = (char *)malloc(sizeof(char) * size);
 	                offset = 0;
-	                memcpy(fs_object_ptr->fs_object_content + offset, buf, size);
-	                fs_object_ptr->fs_object_details->st_size = offset + size;
+	                memcpy(node->fs_object_content + offset, buf, size);
+	                node->fs_object_details->st_size = offset + size;
 
 	                // change modified time
 	                time_t current_time;
 	                time(&current_time);
-	                fs_object_ptr->fs_object_details->st_mtime = current_time;
+	                node->fs_object_details->st_mtime = current_time;
 	                
 	                // update available size
 	                available_size = available_size - size;
@@ -181,15 +160,15 @@ fs_object *get_fs_object(const char *path)
 	                    offset = content_size;
 	                }
 	                long new_size = offset + size;
-	                char *new_content = (char *)realloc(fs_object_ptr->fs_object_content, sizeof(char) * new_size);
-	                fs_object_ptr->fs_object_content = new_content;
-                    memcpy(fs_object_ptr->fs_object_content + offset, buf, size);
-                    fs_object_ptr->fs_object_details->st_size = new_size;
+	                char *new_content = (char *)realloc(node->fs_object_content, sizeof(char) * new_size);
+	                node->fs_object_content = new_content;
+                    memcpy(node->fs_object_content + offset, buf, size);
+                    node->fs_object_details->st_size = new_size;
                     
                     // change access time and modified time
                     time_t current_time;
                     time(&current_time);
-                    fs_object_ptr->fs_object_details->st_mtime = current_time;
+                    node->fs_object_details->st_mtime = current_time;
 
                     // update available size
                     available_size = available_size + content_size - new_size;
@@ -207,7 +186,6 @@ fs_object *get_fs_object(const char *path)
     {
         result = -ENOENT;
     }
-    printf("Exit ramdisk_write\n");
     return result;
 }
 
@@ -216,26 +194,25 @@ fs_object *get_fs_object(const char *path)
 */
  int ramdisk_unlink(const char *path)
 {
-    printf("ramdisk_unlink path : %s\n", path);
     int result = 0;
-    fs_object *fs_object_ptr = get_fs_object(path);
-    if(fs_object_ptr != NULL)
+    Node *node = get_fs_object(path);
+    if(node != NULL)
     {
-        fs_object *fs_object_parent_ptr = fs_object_ptr->parent_directory;
+        Node *fs_object_parent_ptr = node->parent_directory;
         size_t old_size = fs_object_parent_ptr->fs_object_details->st_size;
         long updated_size = old_size;
-        int msg = hashmap_remove(fs_object_parent_ptr->fs_object_map, fs_object_ptr->fs_object_name);
-        if(fs_object_ptr->fs_object_details->st_size != 0)
+        int msg = hashmap_remove(fs_object_parent_ptr->fs_object_map, node->fs_object_name);
+        if(node->fs_object_details->st_size != 0)
         {
-            available_size = available_size + fs_object_ptr->fs_object_details->st_size;
-            updated_size = updated_size - fs_object_ptr->fs_object_details->st_size;
-            free(fs_object_ptr->fs_object_content);
+            available_size = available_size + node->fs_object_details->st_size;
+            updated_size = updated_size - node->fs_object_details->st_size;
+            free(node->fs_object_content);
         }
-        free(fs_object_ptr->fs_object_name);
-        free(fs_object_ptr->fs_object_details);
-        free(fs_object_ptr);
+        free(node->fs_object_name);
+        free(node->fs_object_details);
+        free(node);
 
-        long size_of_file = sizeof(fs_object) + sizeof(struct stat); // size required to store info about file
+        long size_of_file = sizeof(Node) + sizeof(struct stat); // size required to store info about file
 
         updated_size = updated_size - size_of_file;
         if(updated_size < 0)
@@ -248,7 +225,6 @@ fs_object *get_fs_object(const char *path)
     {
         result = -ENOENT;
     }
-    printf("Exit ramdisk_unlink\n");
     return result;
 }
 
@@ -257,7 +233,6 @@ fs_object *get_fs_object(const char *path)
 */
  int ramdisk_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 {
-    printf("ramdisk_create path : %s\n", path);
     int path_length = strlen(path);
 	char tmp_path[path_length];
 	strcpy(tmp_path, path);
@@ -273,11 +248,11 @@ fs_object *get_fs_object(const char *path)
     {
         strcpy(dir_path, tmp_path);
     }
-	fs_object* fs_object_ptr = get_fs_object(dir_path);
-    if(fs_object_ptr != NULL)
+	Node* node = get_fs_object(dir_path);
+    if(node != NULL)
     {
-    	fs_object* fs_object_tmp;
-    	int msg = hashmap_get(fs_object_ptr->fs_object_map, file_name, (void**)(&fs_object_tmp));
+    	Node* fs_object_tmp;
+    	int msg = hashmap_get(node->fs_object_map, file_name, (void**)(&fs_object_tmp));
         if(msg == MAP_OK)
         {
             return -EEXIST;
@@ -289,12 +264,12 @@ fs_object *get_fs_object(const char *path)
         else
         {
         	// create new file structure
-        	fs_object *fs_object_new = (fs_object *)malloc(sizeof(fs_object));
+        	Node *fs_object_new = (Node *)malloc(sizeof(Node));
 	        fs_object_new->fs_object_details = (struct stat *)malloc(sizeof(struct stat));
 	        fs_object_new->fs_object_name = malloc(FILENAME_SIZE * sizeof(char));
 	        strcpy(fs_object_new->fs_object_name, file_name);
 
-	        long size_of_file = sizeof(fs_object) + sizeof(struct stat); // size required to store info about file
+	        long size_of_file = sizeof(Node) + sizeof(struct stat); // size required to store info about file
             
             fs_object_new->fs_object_details->st_mode = S_IFREG | mode;
             fs_object_new->fs_object_details->st_nlink = 1;
@@ -305,21 +280,21 @@ fs_object *get_fs_object(const char *path)
             fs_object_new->fs_object_details->st_mtime = current_time;
             fs_object_new->fs_object_details->st_ctime = current_time;
             
-            fs_object_new->parent_directory = fs_object_ptr;
+            fs_object_new->parent_directory = node;
             fs_object_new->fs_object_map = hashmap_new();
             fs_object_new->fs_object_content = NULL;
             fs_object_new->fs_object_type = IS_FILE;
             
             // add new file to parent
-            if(fs_object_ptr->fs_object_map == NULL)
+            if(node->fs_object_map == NULL)
             {
-                fs_object_ptr->fs_object_map = hashmap_new();
+                node->fs_object_map = hashmap_new();
             }
-            int msg = hashmap_put(fs_object_ptr->fs_object_map, fs_object_new->fs_object_name, fs_object_new);
+            int msg = hashmap_put(node->fs_object_map, fs_object_new->fs_object_name, fs_object_new);
 
-            size_t old_size = fs_object_ptr->fs_object_details->st_size;
+            size_t old_size = node->fs_object_details->st_size;
             long updated_size = old_size + size_of_file;
-            fs_object_ptr->fs_object_details->st_size = updated_size;
+            node->fs_object_details->st_size = updated_size;
 
             available_size = available_size - size_of_file;
         }
@@ -328,7 +303,6 @@ fs_object *get_fs_object(const char *path)
     {
         return -ENOENT;
     }
-    printf("Exit ramdisk_create\n");
     return 0;
 }
 
@@ -337,7 +311,6 @@ fs_object *get_fs_object(const char *path)
 */
  int ramdisk_mkdir(const char *path, mode_t mode)
 {
-    printf("ramdisk_mkdir path : %s\n", path);
     int path_length = strlen(path);
 	char tmp_path[path_length];
 	strcpy(tmp_path, path);
@@ -353,11 +326,11 @@ fs_object *get_fs_object(const char *path)
     {
         strcpy(dir_path, tmp_path);
     }
-	fs_object* fs_object_ptr = get_fs_object(dir_path);
-    if(fs_object_ptr != NULL)
+	Node* node = get_fs_object(dir_path);
+    if(node != NULL)
     {
-    	fs_object* fs_object_tmp;
-    	int msg = hashmap_get(fs_object_ptr->fs_object_map, dir_name, (void**)(&fs_object_tmp));
+    	Node* fs_object_tmp;
+    	int msg = hashmap_get(node->fs_object_map, dir_name, (void**)(&fs_object_tmp));
         if(msg == MAP_OK)
         {
             return -EEXIST;
@@ -369,12 +342,12 @@ fs_object *get_fs_object(const char *path)
         else
         {
         	// creating new dir structure
-            fs_object *fs_object_new = (fs_object *)malloc(sizeof(fs_object));
+            Node *fs_object_new = (Node *)malloc(sizeof(Node));
             fs_object_new->fs_object_details = (struct stat *)malloc( sizeof(struct stat) );
         	fs_object_new->fs_object_name = malloc(FILENAME_SIZE * sizeof(char));
         	strcpy(fs_object_new->fs_object_name, dir_name);
 
-            long size_of_dir = sizeof(fs_object) + sizeof(struct stat); // size required to store info about dir
+            long size_of_dir = sizeof(Node) + sizeof(struct stat); // size required to store info about dir
 
             fs_object_new->fs_object_details->st_nlink = 2;
             fs_object_new->fs_object_details->st_mode = S_IFDIR | mode;
@@ -385,20 +358,20 @@ fs_object *get_fs_object(const char *path)
             fs_object_new->fs_object_details->st_mtime = current_time;
             fs_object_new->fs_object_details->st_ctime = current_time;
             
-            fs_object_new->parent_directory = fs_object_ptr;
+            fs_object_new->parent_directory = node;
             fs_object_new->fs_object_map = hashmap_new();
             fs_object_new->fs_object_type = IS_DIRECTORY;
 
             // adding new dir to parent
-            if(fs_object_ptr->fs_object_map == NULL)
+            if(node->fs_object_map == NULL)
             {
-                fs_object_ptr->fs_object_map = hashmap_new();
+                node->fs_object_map = hashmap_new();
             }
-            int msg = hashmap_put(fs_object_ptr->fs_object_map, fs_object_new->fs_object_name, fs_object_new);
+            int msg = hashmap_put(node->fs_object_map, fs_object_new->fs_object_name, fs_object_new);
 
-            size_t old_size = fs_object_ptr->fs_object_details->st_size;
+            size_t old_size = node->fs_object_details->st_size;
             long updated_size = old_size + size_of_dir;
-            fs_object_ptr->fs_object_details->st_size = updated_size;
+            node->fs_object_details->st_size = updated_size;
 
             available_size = available_size - size_of_dir;
         }
@@ -407,7 +380,6 @@ fs_object *get_fs_object(const char *path)
     {
         return -ENOENT;
     }
-    printf("Exit ramdisk_mkdir\n");
     return 0;
 }
 
@@ -416,23 +388,22 @@ fs_object *get_fs_object(const char *path)
 */
  int ramdisk_rmdir(const char *path)
 {
-    printf("ramdisk_rmdir path : %s\n", path);
-    fs_object *fs_object_ptr = get_fs_object(path);
-    if(fs_object_ptr != NULL)
+    Node *node = get_fs_object(path);
+    if(node != NULL)
     {
-       if(fs_object_ptr->fs_object_map != NULL && hashmap_length(fs_object_ptr->fs_object_map) > 0)
+       if(node->fs_object_map != NULL && hashmap_length(node->fs_object_map) > 0)
         {
             return -ENOTEMPTY;
         }
-        fs_object *fs_object_parent_ptr = fs_object_ptr->parent_directory;
-        int msg = hashmap_remove(fs_object_parent_ptr->fs_object_map, fs_object_ptr->fs_object_name);
+        Node *fs_object_parent_ptr = node->parent_directory;
+        int msg = hashmap_remove(fs_object_parent_ptr->fs_object_map, node->fs_object_name);
         fs_object_parent_ptr->fs_object_details->st_nlink--;
-        free(fs_object_ptr->fs_object_name);
-        free(fs_object_ptr->fs_object_details);
-        hashmap_free(fs_object_ptr->fs_object_map);
-        free(fs_object_ptr);
+        free(node->fs_object_name);
+        free(node->fs_object_details);
+        hashmap_free(node->fs_object_map);
+        free(node);
 
-        long size_of_dir = sizeof(fs_object) + sizeof(struct stat); // size required to store info about dir
+        long size_of_dir = sizeof(Node) + sizeof(struct stat); // size required to store info about dir
 
         size_t old_size = fs_object_parent_ptr->fs_object_details->st_size;
         long updated_size = old_size - size_of_dir;
@@ -446,7 +417,6 @@ fs_object *get_fs_object(const char *path)
     {
         return -ENOENT;
     }
-    printf("Exit ramdisk_rmdir\n");
     return 0;
 }
 
@@ -456,14 +426,12 @@ fs_object *get_fs_object(const char *path)
 */
  int ramdisk_opendir(const char *path, struct fuse_file_info *fi)
 {
-    printf("ramdisk_opendir path : %s\n", path);
     int result = 0;
-    fs_object *fs_object_ptr = get_fs_object(path);
-    if (fs_object_ptr == NULL) 
+    Node *node = get_fs_object(path);
+    if (node == NULL)
     {
         result = -ENOENT;
     }
-    printf("Exit ramdisk_opendir\n");
 	return result;
 }
 
@@ -472,16 +440,15 @@ fs_object *get_fs_object(const char *path)
 */
  int ramdisk_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
 {
-    printf("ramdisk_readdir path : %s\n", path);
-    fs_object *fs_object_ptr = get_fs_object(path);
-    if(fs_object_ptr != NULL)
+    Node *node = get_fs_object(path);
+    if(node != NULL)
     {
         filler(buf, ".", NULL, 0);
         filler(buf, "..", NULL, 0);
-        fs_object *fs_object_tmp;
-        int map_size = hashmap_length(fs_object_ptr->fs_object_map);
+        Node *fs_object_tmp;
+        int map_size = hashmap_length(node->fs_object_map);
         char* keys[map_size];
-        int numKeys = hashmap_keys(fs_object_ptr->fs_object_map, keys);
+        int numKeys = hashmap_keys(node->fs_object_map, keys);
         int i = 0;
         for(i = 0; i < numKeys; i++)
         {
@@ -492,7 +459,6 @@ fs_object *get_fs_object(const char *path)
     {
         return -ENOENT;
     }
-    printf("Exit readdir\n");
     return 0;
 }
 
@@ -502,16 +468,15 @@ fs_object *get_fs_object(const char *path)
 */
  int ramdisk_getattr(const char *path, struct stat *stbuf)
 {
-    printf("ramdisk_getattr path : %s\n", path);
     int result = 0;
-    fs_object *fs_object_ptr = get_fs_object(path);
-    if(fs_object_ptr != NULL)
+    Node *node = get_fs_object(path);
+    if(node != NULL)
     {
-        stbuf->st_nlink = fs_object_ptr->fs_object_details->st_nlink;
-        stbuf->st_mode = fs_object_ptr->fs_object_details->st_mode;
-        stbuf->st_size = fs_object_ptr->fs_object_details->st_size;
-        stbuf->st_mtime = fs_object_ptr->fs_object_details->st_mtime;
-        stbuf->st_ctime = fs_object_ptr->fs_object_details->st_ctime;
+        stbuf->st_nlink = node->fs_object_details->st_nlink;
+        stbuf->st_mode = node->fs_object_details->st_mode;
+        stbuf->st_size = node->fs_object_details->st_size;
+        stbuf->st_mtime = node->fs_object_details->st_mtime;
+        stbuf->st_ctime = node->fs_object_details->st_ctime;
         
         result = 0;
     }
@@ -519,7 +484,6 @@ fs_object *get_fs_object(const char *path)
     {
         result = -ENOENT;
     }
-    printf("Exit getattr\n");
     return result;
 }
 
@@ -529,14 +493,12 @@ fs_object *get_fs_object(const char *path)
 */
  int ramdisk_release(const char *path, struct fuse_file_info *fi)
 {
-	printf("ramdisk_release path : %s\n", path);
     int result = 0;
-    fs_object *fs_object_ptr = get_fs_object(path);
-    if (fs_object_ptr == NULL) 
+    Node *node = get_fs_object(path);
+    if (node == NULL)
     {
         result = -ENOENT;
     }
-    printf("Exit ramdisk_release\n");
     return result;
 }
 
@@ -547,14 +509,12 @@ fs_object *get_fs_object(const char *path)
 */
  int ramdisk_utime(const char *path, struct utimbuf *ubuf)
 {
-	printf("ramdisk_utime path : %s\n", path);
     int result = 0;
-    fs_object *fs_object_ptr = get_fs_object(path);
-    if (fs_object_ptr == NULL) 
+    Node *node = get_fs_object(path);
+    if (node == NULL)
     {
         result = -ENOENT;
     }
-    printf("Exit ramdisk_utime\n");
     return result;
 }
 
@@ -567,14 +527,12 @@ fs_object *get_fs_object(const char *path)
 */
  int ramdisk_truncate(const char *path, off_t offset)
 {
-    printf("ramdisk_truncate path : %s\n", path);
     int result = 0;
-    fs_object *fs_object_ptr = get_fs_object(path);
-    if (fs_object_ptr == NULL) 
+    Node *node = get_fs_object(path);
+    if (node == NULL)
     {
         result = -ENOENT;
     }
-    printf("Exit ramdisk_truncate\n");
     return result;
 }
 
@@ -600,12 +558,12 @@ static struct fuse_operations ramdisk_operations =
 */
 void intialize_root()
 {
-	root = (fs_object *)malloc(sizeof(fs_object));
+	root = (Node *)malloc(sizeof(Node));
 	root->fs_object_details = (struct stat *)malloc(sizeof(struct stat));
 	root->fs_object_name = malloc(FILENAME_SIZE * sizeof(char));
 	strcpy(root->fs_object_name, "/");
 
-	long size_of_dir = sizeof(fs_object) + sizeof(struct stat); // size required to store info about dir
+	long size_of_dir = sizeof(Node) + sizeof(struct stat); // size required to store info about dir
 
     root->fs_object_details->st_mode = S_IFDIR | 0755;
 	root->fs_object_details->st_nlink = 2;
@@ -630,7 +588,6 @@ int main(int argc, char *argv[])
 {
 	if(argc < 3 || argc > 4)
 	{
-		printf("Invalid arguments : ramdisk [mount_path] [size] [filename(optional)]\n");
 		exit(0);
 	}
 	if(argc == 3)
@@ -639,7 +596,6 @@ int main(int argc, char *argv[])
 	}
 	if(argc == 4)
 	{
-		load_fs = 1;
 		fs_path = argv[3];
 		printf("Loading filesystem from %s\n", fs_path);
 		argv[3] = NULL;
@@ -655,9 +611,7 @@ int main(int argc, char *argv[])
 	argv[2] = NULL;
 	argc--;
 
-	// initializing root directory
 	intialize_root();
 
-	// mounting the given location
 	return fuse_main(argc, argv, &ramdisk_operations, NULL);
 }
