@@ -123,11 +123,13 @@ int ramdisk_write(const char *path, const char *buf, size_t size, off_t offset, 
 int ramdisk_unlink(const char *path) {
     int result = 0;
     Node *node = get_node_by_path(path);
-    if (node != NULL) {
+    if (node == NULL) {
+        return -ENOENT;
+    }
         Node *fs_object_parent_ptr = node->parent_directory;
         size_t old_size = fs_object_parent_ptr->st->st_size;
         long updated_size = old_size;
-        int msg = hashmap_remove(fs_object_parent_ptr->_map, node->name);
+        hashmap_remove(fs_object_parent_ptr->_map, node->name);
         if (node->st->st_size != 0) {
             updated_size = updated_size - node->st->st_size;
             free(node->content);
@@ -143,9 +145,6 @@ int ramdisk_unlink(const char *path) {
             updated_size = 0;
         fs_object_parent_ptr->st->st_size = updated_size;
 
-    } else {
-        result = -ENOENT;
-    }
     return result;
 }
 
