@@ -19,7 +19,7 @@ char* fs_path;
 
 Node *root;
 
-Node *get_fs_object(const char *path)
+Node *get_node_by_path(const char *path)
 {
     int path_length = strlen(path);
 	char tmp_path[path_length];
@@ -56,7 +56,7 @@ Node *get_fs_object(const char *path)
  int ramdisk_open(const char *path, struct fuse_file_info *fi)
 {
     int result = 0;
-    Node* node = get_fs_object(path);
+    Node* node = get_node_by_path(path);
     if (node == NULL)
     {
         result = -ENOENT;
@@ -70,7 +70,7 @@ Node *get_fs_object(const char *path)
  int ramdisk_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
     int result = 0;
-    Node *node = get_fs_object(path);
+    Node *node = get_node_by_path(path);
     if(node != NULL)
     {
         if(node->type == IS_FILE)
@@ -113,7 +113,7 @@ Node *get_fs_object(const char *path)
         return -ENOSPC;
     }
     int result = size;
-    Node *node = get_fs_object(path);
+    Node *node = get_node_by_path(path);
     if(node != NULL)
     {
         if(node->type == IS_FILE)
@@ -180,7 +180,7 @@ Node *get_fs_object(const char *path)
  int ramdisk_unlink(const char *path)
 {
     int result = 0;
-    Node *node = get_fs_object(path);
+    Node *node = get_node_by_path(path);
     if(node != NULL)
     {
         Node *fs_object_parent_ptr = node->parent_directory;
@@ -233,7 +233,7 @@ Node *get_fs_object(const char *path)
     {
         strcpy(dir_path, tmp_path);
     }
-	Node* node = get_fs_object(dir_path);
+	Node* node = get_node_by_path(dir_path);
     if(node != NULL)
     {
     	Node* tmp_node;
@@ -311,7 +311,7 @@ Node *get_fs_object(const char *path)
     {
         strcpy(dir_path, tmp_path);
     }
-	Node* node = get_fs_object(dir_path);
+	Node* node = get_node_by_path(dir_path);
     if(node != NULL)
     {
     	Node* tmp_node;
@@ -373,7 +373,7 @@ Node *get_fs_object(const char *path)
 */
  int ramdisk_rmdir(const char *path)
 {
-    Node *node = get_fs_object(path);
+    Node *node = get_node_by_path(path);
     if(node != NULL)
     {
        if(node->_map != NULL && hashmap_length(node->_map) > 0)
@@ -412,7 +412,7 @@ Node *get_fs_object(const char *path)
  int ramdisk_opendir(const char *path, struct fuse_file_info *fi)
 {
     int result = 0;
-    Node *node = get_fs_object(path);
+    Node *node = get_node_by_path(path);
     if (node == NULL)
     {
         result = -ENOENT;
@@ -420,41 +420,32 @@ Node *get_fs_object(const char *path)
 	return result;
 }
 
-/*
-	# Reads the directory at given path
-*/
  int ramdisk_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
 {
-    Node *node = get_fs_object(path);
-    if(node != NULL)
-    {
-        filler(buf, ".", NULL, 0);
-        filler(buf, "..", NULL, 0);
-        Node *tmp_node;
-        int map_size = hashmap_length(node->_map);
-        char* keys[map_size];
-        int numKeys = hashmap_keys(node->_map, keys);
-        int i = 0;
-        for(i = 0; i < numKeys; i++)
-        {
-            filler(buf, keys[i], NULL, 0);
-        }
-    }
-    else
-    {
+    Node *node = get_node_by_path(path);
+
+    if (node == NULL){
         return -ENOENT;
     }
-    return 0;
+
+    filler(buf, ".", NULL, 0);
+    filler(buf, "..", NULL, 0);
+    int map_size = hashmap_length(node->_map);
+    char* keys[map_size];
+    int numKeys = hashmap_keys(node->_map, keys);
+    int i = 0;
+    for(i = 0; i < numKeys; i++)
+    {
+        filler(buf, keys[i], NULL, 0);
+    }
+
+    return SUCCESS;
 }
 
-/*
-	# Reading the metadata of the given path.
-	# Always called before the operation made on the filesystem.
-*/
  int ramdisk_getattr(const char *path, struct stat *stbuf)
 {
     int result = 0;
-    Node *node = get_fs_object(path);
+    Node *node = get_node_by_path(path);
     if(node != NULL)
     {
         stbuf->st_nlink = node->st->st_nlink;
@@ -479,7 +470,7 @@ Node *get_fs_object(const char *path)
  int ramdisk_release(const char *path, struct fuse_file_info *fi)
 {
     int result = 0;
-    Node *node = get_fs_object(path);
+    Node *node = get_node_by_path(path);
     if (node == NULL)
     {
         result = -ENOENT;
@@ -495,7 +486,7 @@ Node *get_fs_object(const char *path)
  int ramdisk_utime(const char *path, struct utimbuf *ubuf)
 {
     int result = 0;
-    Node *node = get_fs_object(path);
+    Node *node = get_node_by_path(path);
     if (node == NULL)
     {
         result = -ENOENT;
@@ -513,7 +504,7 @@ Node *get_fs_object(const char *path)
  int ramdisk_truncate(const char *path, off_t offset)
 {
     int result = 0;
-    Node *node = get_fs_object(path);
+    Node *node = get_node_by_path(path);
     if (node == NULL)
     {
         result = -ENOENT;

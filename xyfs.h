@@ -9,6 +9,7 @@
 
 #define IS_FILE  0
 #define IS_DIRECTORY 1
+#define SUCCESS 0
 
 
 typedef struct node
