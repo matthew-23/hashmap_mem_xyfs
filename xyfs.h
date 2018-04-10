@@ -5,8 +5,7 @@
 #ifndef XYFS_XYFS_H
 #define XYFS_XYFS_H
 
-#define FILENAME_SIZE 100
-
+#define MAX_FILENAME_LENGTH 100
 #define IS_FILE  0
 #define IS_DIRECTORY 1
 #define SUCCESS 0
