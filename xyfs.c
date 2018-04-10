@@ -17,10 +17,6 @@ long fs_size = 0;
 long available_size = 0;
 char* fs_path;
 
-int IS_FILE = 0;
-int IS_DIRECTORY= 1;
-
-
 Node *root;
 
 Node *get_fs_object(const char *path)

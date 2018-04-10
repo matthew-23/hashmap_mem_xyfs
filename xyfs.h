@@ -7,6 +7,10 @@
 
 #define FILENAME_SIZE 100
 
+#define IS_FILE  0
+#define IS_DIRECTORY 1
+
+
 typedef struct node
 {
     char* name;
