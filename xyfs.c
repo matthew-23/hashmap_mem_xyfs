@@ -35,7 +35,7 @@ Node *get_node_by_path(const char *path) {
     return node;
 }
 
-int ramdisk_open(const char *path, struct fuse_file_info *fi) {
+int xyfs_open(const char *path, struct fuse_file_info *fi) {
     int result = 0;
     Node *node = get_node_by_path(path);
     if (node == NULL) {
@@ -44,7 +44,7 @@ int ramdisk_open(const char *path, struct fuse_file_info *fi) {
     return result;
 }
 
-int ramdisk_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+int xyfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
     int result = 0;
     Node *node = get_node_by_path(path);
     if (node == NULL) {
@@ -69,7 +69,7 @@ int ramdisk_read(const char *path, char *buf, size_t size, off_t offset, struct 
     return result;
 }
 
-int ramdisk_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+int xyfs_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
     Node *node = get_node_by_path(path);
     if (node == NULL) {
         return -ENOENT;
@@ -102,7 +102,7 @@ int ramdisk_write(const char *path, const char *buf, size_t size, off_t offset, 
     return size;
 }
 
-int ramdisk_unlink(const char *path) {
+int xyfs_unlink(const char *path) {
     int result = SUCCESS;
     Node *node = get_node_by_path(path);
     if (node == NULL) {
@@ -130,7 +130,7 @@ int ramdisk_unlink(const char *path) {
     return result;
 }
 
-int ramdisk_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
+int xyfs_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
     char _path[MAX_PATH_LENGTH];
     strcpy(_path, path);
     char dir_path[MAX_PATH_LENGTH];
@@ -187,7 +187,7 @@ int ramdisk_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
     return 0;
 }
 
-int ramdisk_mkdir(const char *path, mode_t mode) {
+int xyfs_mkdir(const char *path, mode_t mode) {
     char _path[MAX_PATH_LENGTH];
     strcpy(_path, path);
     char dir_path[MAX_PATH_LENGTH];
@@ -243,7 +243,7 @@ int ramdisk_mkdir(const char *path, mode_t mode) {
     return SUCCESS;
 }
 
-int ramdisk_rmdir(const char *path) {
+int xyfs_rmdir(const char *path) {
     Node *node = get_node_by_path(path);
     if (node == NULL) {
         return -ENOENT;
@@ -269,7 +269,7 @@ int ramdisk_rmdir(const char *path) {
     return SUCCESS;
 }
 
-int ramdisk_opendir(const char *path, struct fuse_file_info *fi) {
+int xyfs_opendir(const char *path, struct fuse_file_info *fi) {
     int result = SUCCESS;
     Node *node = get_node_by_path(path);
     if (node == NULL) {
@@ -278,7 +278,7 @@ int ramdisk_opendir(const char *path, struct fuse_file_info *fi) {
     return result;
 }
 
-int ramdisk_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
+int xyfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
     Node *node = get_node_by_path(path);
 
     if (node == NULL) {
@@ -298,7 +298,7 @@ int ramdisk_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t o
     return SUCCESS;
 }
 
-int ramdisk_getattr(const char *path, struct stat *stbuf) {
+int xyfs_getattr(const char *path, struct stat *stbuf) {
     Node *node = get_node_by_path(path);
     if (node == NULL){
         return -ENOENT;
@@ -312,7 +312,7 @@ int ramdisk_getattr(const char *path, struct stat *stbuf) {
     return SUCCESS;
 }
 
-int ramdisk_release(const char *path, struct fuse_file_info *fi) {
+int xyfs_release(const char *path, struct fuse_file_info *fi) {
     int result = 0;
     Node *node = get_node_by_path(path);
     if (node == NULL) {
@@ -321,7 +321,7 @@ int ramdisk_release(const char *path, struct fuse_file_info *fi) {
     return result;
 }
 
-int ramdisk_utime(const char *path, struct utimbuf *ubuf) {
+int xyfs_utime(const char *path, struct utimbuf *ubuf) {
     int result = SUCCESS;
     Node *node = get_node_by_path(path);
     if (node == NULL) {
@@ -330,7 +330,7 @@ int ramdisk_utime(const char *path, struct utimbuf *ubuf) {
     return result;
 }
 
-int ramdisk_truncate(const char *path, off_t offset) {
+int xyfs_truncate(const char *path, off_t offset) {
     int result = SUCCESS;
     Node *node = get_node_by_path(path);
     if (node == NULL) {
@@ -339,20 +339,20 @@ int ramdisk_truncate(const char *path, off_t offset) {
     return result;
 }
 
-static struct fuse_operations ramdisk_operations = {
-        .open = ramdisk_open,
-        .release = ramdisk_release,
-        .read = ramdisk_read,
-        .write = ramdisk_write,
-        .create = ramdisk_create,
-        .mkdir = ramdisk_mkdir,
-        .unlink = ramdisk_unlink,
-        .rmdir = ramdisk_rmdir,
-        .opendir = ramdisk_opendir,
-        .readdir = ramdisk_readdir,
-        .getattr = ramdisk_getattr,
-        .truncate = ramdisk_truncate,
-        .utime = ramdisk_utime
+static struct fuse_operations xyfs_operations = {
+        .open = xyfs_open,
+        .release = xyfs_release,
+        .read = xyfs_read,
+        .write = xyfs_write,
+        .create = xyfs_create,
+        .mkdir = xyfs_mkdir,
+        .unlink = xyfs_unlink,
+        .rmdir = xyfs_rmdir,
+        .opendir = xyfs_opendir,
+        .readdir = xyfs_readdir,
+        .getattr = xyfs_getattr,
+        .truncate = xyfs_truncate,
+        .utime = xyfs_utime
 };
 
 void init_root() {
@@ -381,5 +381,5 @@ int main(int argc, char *argv[]) {
         printf("Starting new filesystem.\n");
     }
     init_root();
-    return fuse_main(argc, argv, &ramdisk_operations, NULL);
+    return fuse_main(argc, argv, &xyfs_operations, NULL);
 }
