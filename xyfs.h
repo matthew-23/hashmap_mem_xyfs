@@ -10,6 +10,7 @@
 #define IS_FILE  0
 #define IS_DIRECTORY 1
 #define SUCCESS 0
+#define MAX_PATH_LENGTH 4096
 
 
 typedef struct node

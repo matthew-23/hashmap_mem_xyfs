@@ -21,8 +21,7 @@ Node *root;
 
 Node *get_node_by_path(const char *path)
 {
-    int path_length = strlen(path);
-	char _path[path_length];
+	char _path[MAX_PATH_LENGTH];
 	strcpy(_path, path);
 	Node* node = root;
 	if(strcmp(path, "/") == 0)
@@ -61,37 +60,33 @@ Node *get_node_by_path(const char *path)
 
  int ramdisk_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-    int result = 0;
+    int result = SUCCESS;
     Node *node = get_node_by_path(path);
-    if(node != NULL)
-    {
-        if(node->type == IS_FILE)
-        {
-            size_t content_size = node->st->st_size;
-            if(offset < content_size)
-            {
-                if(offset + size > content_size)
-                {
-                    size = content_size - offset;
-                }
-                memcpy(buf, node->content + offset, size);
-            }
-            else
-            {
-                size = 0;
-            }
+    if (node == NULL){
+        return -ENOENT;
 
-            result = size;
-        }
-        else
+    }
+
+
+    if(node->type != IS_FILE){
+        return -EISDIR;
+    }
+
+    size_t content_size = node->st->st_size;
+    if(offset < content_size)
+    {
+        if(offset + size > content_size)
         {
-            result = -EISDIR;
+            size = content_size - offset;
         }
+        memcpy(buf, node->content + offset, size);
     }
     else
     {
-        result = -ENOENT;
+        size = 0;
     }
+
+    result = size;
     return result;
 }
 
