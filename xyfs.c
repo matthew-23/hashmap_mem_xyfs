@@ -12,9 +12,6 @@
 
 #include "xyfs.h"
 
-
-char *fs_path;
-
 Node *root;
 
 Node *get_node_by_path(const char *path) {
@@ -161,47 +158,44 @@ int ramdisk_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
         strcpy(dir_path, _path);
     }
     Node *node = get_node_by_path(dir_path);
-    if (node != NULL) {
-        Node *tmp_node;
-        int msg = hashmap_get(node->_map, file_name, (void **) (&tmp_node));
-        if (msg == MAP_OK) {
-            return -EEXIST;
-        } else {
-
-            Node *fs_object_new = (Node *) malloc(sizeof(Node));
-            fs_object_new->st = (struct stat *) malloc(sizeof(struct stat));
-            fs_object_new->name = malloc(FILENAME_SIZE * sizeof(char));
-            strcpy(fs_object_new->name, file_name);
-
-            long size_of_file = sizeof(Node) + sizeof(struct stat);
-
-            fs_object_new->st->st_mode = S_IFREG | mode;
-            fs_object_new->st->st_nlink = 1;
-            fs_object_new->st->st_size = 0;
-
-            time_t current_time;
-            time(&current_time);
-            fs_object_new->st->st_mtime = current_time;
-            fs_object_new->st->st_ctime = current_time;
-
-            fs_object_new->parent_directory = node;
-            fs_object_new->_map = hashmap_new();
-            fs_object_new->content = NULL;
-            fs_object_new->type = IS_FILE;
-
-
-            if (node->_map == NULL) {
-                node->_map = hashmap_new();
-            }
-            int msg = hashmap_put(node->_map, fs_object_new->name, fs_object_new);
-
-            size_t old_size = node->st->st_size;
-            long updated_size = old_size + size_of_file;
-            node->st->st_size = updated_size;
-
-        }
-    } else {
+    if (node == NULL) {
         return -ENOENT;
+    }
+    Node *tmp_node;
+    int msg = hashmap_get(node->_map, file_name, (void **) (&tmp_node));
+    if (msg == MAP_OK) {
+        return -EEXIST;
+    } else {
+        Node *fs_object_new = (Node *) malloc(sizeof(Node));
+        fs_object_new->st = (struct stat *) malloc(sizeof(struct stat));
+        fs_object_new->name = malloc(FILENAME_SIZE * sizeof(char));
+        strcpy(fs_object_new->name, file_name);
+
+        long size_of_file = sizeof(Node) + sizeof(struct stat);
+
+        fs_object_new->st->st_mode = S_IFREG | mode;
+        fs_object_new->st->st_nlink = 1;
+        fs_object_new->st->st_size = 0;
+
+        time_t current_time;
+        time(&current_time);
+        fs_object_new->st->st_mtime = current_time;
+        fs_object_new->st->st_ctime = current_time;
+
+        fs_object_new->parent_directory = node;
+        fs_object_new->_map = hashmap_new();
+        fs_object_new->content = NULL;
+        fs_object_new->type = IS_FILE;
+
+        if (node->_map == NULL) {
+            node->_map = hashmap_new();
+        }
+        hashmap_put(node->_map, fs_object_new->name, fs_object_new);
+
+        size_t old_size = node->st->st_size;
+        long updated_size = old_size + size_of_file;
+        node->st->st_size = updated_size;
+
     }
     return 0;
 }
@@ -220,46 +214,45 @@ int ramdisk_mkdir(const char *path, mode_t mode) {
         strcpy(dir_path, _path);
     }
     Node *node = get_node_by_path(dir_path);
-    if (node != NULL) {
-        Node *tmp_node;
-        int msg = hashmap_get(node->_map, dir_name, (void **) (&tmp_node));
-        if (msg == MAP_OK) {
-            return -EEXIST;
-        } else {
-
-            Node *fs_object_new = (Node *) malloc(sizeof(Node));
-            fs_object_new->st = (struct stat *) malloc(sizeof(struct stat));
-            fs_object_new->name = malloc(FILENAME_SIZE * sizeof(char));
-            strcpy(fs_object_new->name, dir_name);
-
-            long size_of_dir = sizeof(Node) + sizeof(struct stat);
-
-            fs_object_new->st->st_nlink = 2;
-            fs_object_new->st->st_mode = S_IFDIR | mode;
-            fs_object_new->st->st_size = size_of_dir;
-
-            time_t current_time;
-            time(&current_time);
-            fs_object_new->st->st_mtime = current_time;
-            fs_object_new->st->st_ctime = current_time;
-
-            fs_object_new->parent_directory = node;
-            fs_object_new->_map = hashmap_new();
-            fs_object_new->type = IS_DIRECTORY;
-
-
-            if (node->_map == NULL) {
-                node->_map = hashmap_new();
-            }
-            int msg = hashmap_put(node->_map, fs_object_new->name, fs_object_new);
-
-            size_t old_size = node->st->st_size;
-            long updated_size = old_size + size_of_dir;
-            node->st->st_size = updated_size;
-
-        }
-    } else {
+    if (node == NULL) {
         return -ENOENT;
+    }
+    Node *tmp_node;
+    int msg = hashmap_get(node->_map, dir_name, (void **) (&tmp_node));
+    if (msg == MAP_OK) {
+        return -EEXIST;
+    } else {
+
+        Node *fs_object_new = (Node *) malloc(sizeof(Node));
+        fs_object_new->st = (struct stat *) malloc(sizeof(struct stat));
+        fs_object_new->name = malloc(FILENAME_SIZE * sizeof(char));
+        strcpy(fs_object_new->name, dir_name);
+
+        long size_of_dir = sizeof(Node) + sizeof(struct stat);
+
+        fs_object_new->st->st_nlink = 2;
+        fs_object_new->st->st_mode = S_IFDIR | mode;
+        fs_object_new->st->st_size = size_of_dir;
+
+        time_t current_time;
+        time(&current_time);
+        fs_object_new->st->st_mtime = current_time;
+        fs_object_new->st->st_ctime = current_time;
+
+        fs_object_new->parent_directory = node;
+        fs_object_new->_map = hashmap_new();
+        fs_object_new->type = IS_DIRECTORY;
+
+
+        if (node->_map == NULL) {
+            node->_map = hashmap_new();
+        }
+        int msg = hashmap_put(node->_map, fs_object_new->name, fs_object_new);
+
+        size_t old_size = node->st->st_size;
+        long updated_size = old_size + size_of_dir;
+        node->st->st_size = updated_size;
+
     }
     return SUCCESS;
 }
@@ -271,7 +264,7 @@ int ramdisk_rmdir(const char *path) {
             return -ENOTEMPTY;
         }
         Node *fs_object_parent_ptr = node->parent_directory;
-        int msg = hashmap_remove(fs_object_parent_ptr->_map, node->name);
+        hashmap_remove(fs_object_parent_ptr->_map, node->name);
         fs_object_parent_ptr->st->st_nlink--;
         free(node->name);
         free(node->st);
@@ -292,10 +285,6 @@ int ramdisk_rmdir(const char *path) {
     return SUCCESS;
 }
 
-/*
-	# Opens the directory at given path
-	# We do not need to actually open the directory, just return 0
-*/
 int ramdisk_opendir(const char *path, struct fuse_file_info *fi) {
     int result = SUCCESS;
     Node *node = get_node_by_path(path);
@@ -411,10 +400,6 @@ int main(int argc, char *argv[]) {
     if (argc == 2) {
         printf("Starting new filesystem.\n");
     }
-//    argv[2] = NULL;
-//    argc--;
-
     init_root();
-
     return fuse_main(argc, argv, &ramdisk_operations, NULL);
 }
