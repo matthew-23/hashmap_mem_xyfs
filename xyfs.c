@@ -122,10 +122,10 @@ int ramdisk_unlink(const char *path) {
     if (node == NULL) {
         return -ENOENT;
     }
-    Node *fs_object_parent_ptr = node->parent_directory;
-    size_t old_size = fs_object_parent_ptr->st->st_size;
+    Node *parent_dir = node->parent_dir;
+    size_t old_size = parent_dir->st->st_size;
     long updated_size = old_size;
-    hashmap_remove(fs_object_parent_ptr->_map, node->name);
+    hashmap_remove(parent_dir->_map, node->name);
     if (node->st->st_size != 0) {
         updated_size = updated_size - node->st->st_size;
         free(node->content);
@@ -139,7 +139,7 @@ int ramdisk_unlink(const char *path) {
     updated_size = updated_size - size_of_file;
     if (updated_size < 0)
         updated_size = 0;
-    fs_object_parent_ptr->st->st_size = updated_size;
+    parent_dir->st->st_size = updated_size;
 
     return result;
 }
@@ -182,7 +182,7 @@ int ramdisk_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
         fs_object_new->st->st_mtime = current_time;
         fs_object_new->st->st_ctime = current_time;
 
-        fs_object_new->parent_directory = node;
+        fs_object_new->parent_dir = node;
         fs_object_new->_map = hashmap_new();
         fs_object_new->content = NULL;
         fs_object_new->type = IS_FILE;
@@ -239,7 +239,7 @@ int ramdisk_mkdir(const char *path, mode_t mode) {
         fs_object_new->st->st_mtime = current_time;
         fs_object_new->st->st_ctime = current_time;
 
-        fs_object_new->parent_directory = node;
+        fs_object_new->parent_dir = node;
         fs_object_new->_map = hashmap_new();
         fs_object_new->type = IS_DIRECTORY;
 
@@ -259,29 +259,28 @@ int ramdisk_mkdir(const char *path, mode_t mode) {
 
 int ramdisk_rmdir(const char *path) {
     Node *node = get_node_by_path(path);
-    if (node != NULL) {
-        if (node->_map != NULL && hashmap_length(node->_map) > 0) {
-            return -ENOTEMPTY;
-        }
-        Node *fs_object_parent_ptr = node->parent_directory;
-        hashmap_remove(fs_object_parent_ptr->_map, node->name);
-        fs_object_parent_ptr->st->st_nlink--;
-        free(node->name);
-        free(node->st);
-        hashmap_free(node->_map);
-        free(node);
-
-        long size_of_dir = sizeof(Node) + sizeof(struct stat);
-
-        size_t old_size = fs_object_parent_ptr->st->st_size;
-        long updated_size = old_size - size_of_dir;
-        if (updated_size < 0)
-            updated_size = 0;
-        fs_object_parent_ptr->st->st_size = updated_size;
-
-    } else {
+    if (node == NULL) {
         return -ENOENT;
     }
+    if (node->_map != NULL && hashmap_length(node->_map) > 0) {
+        return -ENOTEMPTY;
+    }
+    Node *parent_dir = node->parent_dir;
+    hashmap_remove(parent_dir->_map, node->name);
+    parent_dir->st->st_nlink--;
+    free(node->name);
+    free(node->st);
+    hashmap_free(node->_map);
+    free(node);
+
+    long size_of_dir = sizeof(Node) + sizeof(struct stat);
+
+    size_t old_size = parent_dir->st->st_size;
+    long updated_size = old_size - size_of_dir;
+    if (updated_size < 0)
+        updated_size = 0;
+    parent_dir->st->st_size = updated_size;
+
     return SUCCESS;
 }
 
@@ -389,7 +388,7 @@ void init_root() {
     time(&current_time);
     root->st->st_mtime = current_time;
     root->st->st_ctime = current_time;
-    root->parent_directory = NULL;
+    root->parent_dir = NULL;
     root->_map = hashmap_new();
     root->content = NULL;
     root->type = IS_DIRECTORY;
