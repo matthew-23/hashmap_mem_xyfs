@@ -13,7 +13,6 @@
 #include "xyfs.h"
 
 
-long fs_size = 0;
 char *fs_path;
 
 Node *root;
@@ -126,24 +125,24 @@ int ramdisk_unlink(const char *path) {
     if (node == NULL) {
         return -ENOENT;
     }
-        Node *fs_object_parent_ptr = node->parent_directory;
-        size_t old_size = fs_object_parent_ptr->st->st_size;
-        long updated_size = old_size;
-        hashmap_remove(fs_object_parent_ptr->_map, node->name);
-        if (node->st->st_size != 0) {
-            updated_size = updated_size - node->st->st_size;
-            free(node->content);
-        }
-        free(node->name);
-        free(node->st);
-        free(node);
+    Node *fs_object_parent_ptr = node->parent_directory;
+    size_t old_size = fs_object_parent_ptr->st->st_size;
+    long updated_size = old_size;
+    hashmap_remove(fs_object_parent_ptr->_map, node->name);
+    if (node->st->st_size != 0) {
+        updated_size = updated_size - node->st->st_size;
+        free(node->content);
+    }
+    free(node->name);
+    free(node->st);
+    free(node);
 
-        long size_of_file = sizeof(Node) + sizeof(struct stat);
+    long size_of_file = sizeof(Node) + sizeof(struct stat);
 
-        updated_size = updated_size - size_of_file;
-        if (updated_size < 0)
-            updated_size = 0;
-        fs_object_parent_ptr->st->st_size = updated_size;
+    updated_size = updated_size - size_of_file;
+    if (updated_size < 0)
+        updated_size = 0;
+    fs_object_parent_ptr->st->st_size = updated_size;
 
     return result;
 }
@@ -361,15 +360,8 @@ int ramdisk_utime(const char *path, struct utimbuf *ubuf) {
     return result;
 }
 
-/*
-    # Function to handle error occured in echo 
-    # while writing data to already existing file 
-    # handling error in [echo "new data" > abc.txt] (abc.txt is an existing file)
-    # We do not need to implement actual function
-    # just returning 0 is sufficient
-*/
 int ramdisk_truncate(const char *path, off_t offset) {
-    int result = 0;
+    int result = SUCCESS;
     Node *node = get_node_by_path(path);
     if (node == NULL) {
         result = -ENOENT;
@@ -377,24 +369,23 @@ int ramdisk_truncate(const char *path, off_t offset) {
     return result;
 }
 
-static struct fuse_operations ramdisk_operations =
-        {
-                .open = ramdisk_open,
-                .release = ramdisk_release,
-                .read = ramdisk_read,
-                .write = ramdisk_write,
-                .create = ramdisk_create,
-                .mkdir = ramdisk_mkdir,
-                .unlink = ramdisk_unlink,
-                .rmdir = ramdisk_rmdir,
-                .opendir = ramdisk_opendir,
-                .readdir = ramdisk_readdir,
-                .getattr = ramdisk_getattr,
-                .truncate = ramdisk_truncate,
-                .utime = ramdisk_utime
-        };
+static struct fuse_operations ramdisk_operations = {
+        .open = ramdisk_open,
+        .release = ramdisk_release,
+        .read = ramdisk_read,
+        .write = ramdisk_write,
+        .create = ramdisk_create,
+        .mkdir = ramdisk_mkdir,
+        .unlink = ramdisk_unlink,
+        .rmdir = ramdisk_rmdir,
+        .opendir = ramdisk_opendir,
+        .readdir = ramdisk_readdir,
+        .getattr = ramdisk_getattr,
+        .truncate = ramdisk_truncate,
+        .utime = ramdisk_utime
+};
 
-void intialize_root() {
+void init_root() {
     root = (Node *) malloc(sizeof(Node));
     root->st = (struct stat *) malloc(sizeof(struct stat));
     root->name = malloc(FILENAME_SIZE * sizeof(char));
@@ -417,27 +408,13 @@ void intialize_root() {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 3 || argc > 4) {
-        exit(0);
-    }
-    if (argc == 3) {
+    if (argc == 2) {
         printf("Starting new filesystem.\n");
     }
-    if (argc == 4) {
-        fs_path = argv[3];
-        printf("Loading filesystem from %s\n", fs_path);
-        argv[3] = NULL;
-        argc--;
-    }
-    fs_size = atol(argv[2]) * 1024 * 1024;
-    if (fs_size < 1) {
-        printf("Filesystem size must be greater than zero.\n");
-        exit(0);
-    }
-    argv[2] = NULL;
-    argc--;
+//    argv[2] = NULL;
+//    argc--;
 
-    intialize_root();
+    init_root();
 
     return fuse_main(argc, argv, &ramdisk_operations, NULL);
 }
