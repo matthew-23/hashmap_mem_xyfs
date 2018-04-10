@@ -83,4 +83,4 @@ extern int hashmap_length(map_t in);
  */
 extern int hashmap_keys(map_t in, char* keys[]);
 
-#endif __HASHMAP_H__
+#endif //__HASHMAP_H__

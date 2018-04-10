@@ -43,7 +43,7 @@ fs_object *root;
 	# Checks if given path exists
 	# Returns pointer to fs_object if given path exists else return NULL
 */
-fs_object *get_fs_object(char *path)
+fs_object *get_fs_object(const char *path)
 {
     printf("Get fs_object at path : %s\n", path);
     int path_length = strlen(path);
@@ -84,7 +84,7 @@ fs_object *get_fs_object(char *path)
 	# Returns 0 if file exist else return error
 	# We do not need to actually open the file, just return 0 is enough
 */
-static int ramdisk_open(const char *path, struct fuse_file_info *fi)
+ int ramdisk_open(const char *path, struct fuse_file_info *fi)
 {
     printf("ramdisk_open path : %s\n", path);
     int result = 0;
@@ -100,7 +100,7 @@ static int ramdisk_open(const char *path, struct fuse_file_info *fi)
 /*
 	# Reads the file at given path
 */
-static int ramdisk_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+ int ramdisk_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
     printf("ramdisk_read path : %s\n", path);
     int result = 0;
@@ -141,7 +141,7 @@ static int ramdisk_read(const char *path, char *buf, size_t size, off_t offset, 
 /*
 	# Writes given data to file at given path
 */
-static int ramdisk_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+ int ramdisk_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
     printf("ramdisk_write path : %s\n", path);
     if(available_size < size)
@@ -214,7 +214,7 @@ static int ramdisk_write(const char *path, const char *buf, size_t size, off_t o
 /*
 	# Deletes a file at given path
 */
-static int ramdisk_unlink(const char *path)
+ int ramdisk_unlink(const char *path)
 {
     printf("ramdisk_unlink path : %s\n", path);
     int result = 0;
@@ -255,7 +255,7 @@ static int ramdisk_unlink(const char *path)
 /*
 	# Creates a file at given path in given mode
 */
-static int ramdisk_create(const char *path, mode_t mode, struct fuse_file_info *fi)
+ int ramdisk_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 {
     printf("ramdisk_create path : %s\n", path);
     int path_length = strlen(path);
@@ -335,7 +335,7 @@ static int ramdisk_create(const char *path, mode_t mode, struct fuse_file_info *
 /*
 	# Creates a directory at given path in given mode
 */
-static int ramdisk_mkdir(const char *path, mode_t mode)
+ int ramdisk_mkdir(const char *path, mode_t mode)
 {
     printf("ramdisk_mkdir path : %s\n", path);
     int path_length = strlen(path);
@@ -414,7 +414,7 @@ static int ramdisk_mkdir(const char *path, mode_t mode)
 /*
 	# Removes the directory at given path
 */
-static int ramdisk_rmdir(const char *path)
+ int ramdisk_rmdir(const char *path)
 {
     printf("ramdisk_rmdir path : %s\n", path);
     fs_object *fs_object_ptr = get_fs_object(path);
@@ -454,7 +454,7 @@ static int ramdisk_rmdir(const char *path)
 	# Opens the directory at given path
 	# We do not need to actually open the directory, just return 0
 */
-static int ramdisk_opendir(const char *path, struct fuse_file_info *fi)
+ int ramdisk_opendir(const char *path, struct fuse_file_info *fi)
 {
     printf("ramdisk_opendir path : %s\n", path);
     int result = 0;
@@ -470,7 +470,7 @@ static int ramdisk_opendir(const char *path, struct fuse_file_info *fi)
 /*
 	# Reads the directory at given path
 */
-static int ramdisk_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
+ int ramdisk_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
 {
     printf("ramdisk_readdir path : %s\n", path);
     fs_object *fs_object_ptr = get_fs_object(path);
@@ -500,7 +500,7 @@ static int ramdisk_readdir(const char *path, void *buf, fuse_fill_dir_t filler, 
 	# Reading the metadata of the given path.
 	# Always called before the operation made on the filesystem.
 */
-static int ramdisk_getattr(const char *path, struct stat *stbuf)
+ int ramdisk_getattr(const char *path, struct stat *stbuf)
 {
     printf("ramdisk_getattr path : %s\n", path);
     int result = 0;
@@ -527,7 +527,7 @@ static int ramdisk_getattr(const char *path, struct stat *stbuf)
 	# Closes the file at given path
 	# We do not need to actually close the file, just returning 0 is sufficient
 */
-static int ramdisk_release(const char *path, struct fuse_file_info *fi)
+ int ramdisk_release(const char *path, struct fuse_file_info *fi)
 {
 	printf("ramdisk_release path : %s\n", path);
     int result = 0;
@@ -545,7 +545,7 @@ static int ramdisk_release(const char *path, struct fuse_file_info *fi)
 	# warning in touch abc.txt
 	# We do not need to actually implement the function, just return 0
 */
-static int ramdisk_utime(const char *path, struct utimbuf *ubuf)
+ int ramdisk_utime(const char *path, struct utimbuf *ubuf)
 {
 	printf("ramdisk_utime path : %s\n", path);
     int result = 0;
@@ -565,7 +565,7 @@ static int ramdisk_utime(const char *path, struct utimbuf *ubuf)
     # We do not need to implement actual function
     # just returning 0 is sufficient
 */
-static int ramdisk_truncate(const char *path, off_t offset)
+ int ramdisk_truncate(const char *path, off_t offset)
 {
     printf("ramdisk_truncate path : %s\n", path);
     int result = 0;
