@@ -22,34 +22,29 @@ Node *root;
 Node *get_node_by_path(const char *path)
 {
     int path_length = strlen(path);
-	char tmp_path[path_length];
-	strcpy(tmp_path, path);
-	char* path_token;
-	Node* node = NULL;
+	char _path[path_length];
+	strcpy(_path, path);
+	Node* node = root;
 	if(strcmp(path, "/") == 0)
 	{
-		node = root;
+		return node;
 	}
-	else
-	{
-		path_token = strtok(tmp_path,"/");
-		node = root;
-		Node* tmp_node;
-		while(path_token != NULL)
-		{
-            int msg = hashmap_get(node->_map, path_token, (void**)(&tmp_node));
-            if(msg == MAP_OK)
-            {
-                node = tmp_node;
-				path_token = strtok(NULL, "/");
-            }
-            else
-            {
-                node = NULL;
-                break;
-            }
+    char* splited_path = strtok(_path,"/");
+    Node* tmp_node;
+    while(splited_path != NULL)
+    {
+        int msg = hashmap_get(node->_map, splited_path, (void**)(&tmp_node));
+        if(msg == MAP_OK)
+        {
+            node = tmp_node;
+            splited_path = strtok(NULL, "/");
         }
-	}
+        else
+        {
+            node = NULL;
+            break;
+        }
+    }
 	return node;
 }
 
@@ -64,9 +59,6 @@ Node *get_node_by_path(const char *path)
     return result;
 }
 
-/*
-	# Reads the file at given path
-*/
  int ramdisk_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
     int result = 0;
@@ -103,9 +95,6 @@ Node *get_node_by_path(const char *path)
     return result;
 }
 
-/*
-	# Writes given data to file at given path
-*/
  int ramdisk_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
     if(available_size < size)
@@ -174,9 +163,6 @@ Node *get_node_by_path(const char *path)
     return result;
 }
 
-/*
-	# Deletes a file at given path
-*/
  int ramdisk_unlink(const char *path)
 {
     int result = 0;
@@ -213,25 +199,22 @@ Node *get_node_by_path(const char *path)
     return result;
 }
 
-/*
-	# Creates a file at given path in given mode
-*/
  int ramdisk_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 {
     int path_length = strlen(path);
-	char tmp_path[path_length];
-	strcpy(tmp_path, path);
+	char _path[path_length];
+	strcpy(_path, path);
 	char dir_path[path_length];
-	char* last_slash = strrchr(tmp_path, '/');
+	char* last_slash = strrchr(_path, '/');
 	char* file_name = last_slash + 1;
 	*last_slash = 0;
-	if(strlen(tmp_path) == 0)
+	if(strlen(_path) == 0)
     {
         strcpy(dir_path, "/");
     }
     else
     {
-        strcpy(dir_path, tmp_path);
+        strcpy(dir_path, _path);
     }
 	Node* node = get_node_by_path(dir_path);
     if(node != NULL)
@@ -291,25 +274,22 @@ Node *get_node_by_path(const char *path)
     return 0;
 }
 
-/*
-	# Creates a directory at given path in given mode
-*/
  int ramdisk_mkdir(const char *path, mode_t mode)
 {
     int path_length = strlen(path);
-	char tmp_path[path_length];
-	strcpy(tmp_path, path);
+	char _path[path_length];
+	strcpy(_path, path);
 	char dir_path[path_length];
-	char* last_slash = strrchr(tmp_path, '/');
+	char* last_slash = strrchr(_path, '/');
 	char* dir_name = last_slash + 1;
 	*last_slash = 0;
-	if(strlen(tmp_path) == 0)
+	if(strlen(_path) == 0)
     {
         strcpy(dir_path, "/");
     }
     else
     {
-        strcpy(dir_path, tmp_path);
+        strcpy(dir_path, _path);
     }
 	Node* node = get_node_by_path(dir_path);
     if(node != NULL)
@@ -365,12 +345,9 @@ Node *get_node_by_path(const char *path)
     {
         return -ENOENT;
     }
-    return 0;
+    return SUCCESS;
 }
 
-/*
-	# Removes the directory at given path
-*/
  int ramdisk_rmdir(const char *path)
 {
     Node *node = get_node_by_path(path);
@@ -402,7 +379,7 @@ Node *get_node_by_path(const char *path)
     {
         return -ENOENT;
     }
-    return 0;
+    return SUCCESS;
 }
 
 /*
@@ -411,7 +388,7 @@ Node *get_node_by_path(const char *path)
 */
  int ramdisk_opendir(const char *path, struct fuse_file_info *fi)
 {
-    int result = 0;
+    int result = SUCCESS;
     Node *node = get_node_by_path(path);
     if (node == NULL)
     {
@@ -444,7 +421,7 @@ Node *get_node_by_path(const char *path)
 
  int ramdisk_getattr(const char *path, struct stat *stbuf)
 {
-    int result = 0;
+    int result = SUCCESS;
     Node *node = get_node_by_path(path);
     if(node != NULL)
     {
@@ -463,10 +440,6 @@ Node *get_node_by_path(const char *path)
     return result;
 }
 
-/*
-	# Closes the file at given path
-	# We do not need to actually close the file, just returning 0 is sufficient
-*/
  int ramdisk_release(const char *path, struct fuse_file_info *fi)
 {
     int result = 0;
@@ -478,14 +451,9 @@ Node *get_node_by_path(const char *path)
     return result;
 }
 
-/*
-	# Function to handle time setting warning when file is created using touch command
-	# warning in touch abc.txt
-	# We do not need to actually implement the function, just return 0
-*/
  int ramdisk_utime(const char *path, struct utimbuf *ubuf)
 {
-    int result = 0;
+    int result = SUCCESS;
     Node *node = get_node_by_path(path);
     if (node == NULL)
     {
