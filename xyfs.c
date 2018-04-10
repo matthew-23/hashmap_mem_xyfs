@@ -110,7 +110,7 @@ int ramdisk_unlink(const char *path) {
     }
     Node *parent_dir = node->parent_dir;
     hashmap_remove(parent_dir->_map, node->name);
-    
+
     size_t old_size = parent_dir->st->st_size;
     long updated_size = old_size;
     if (node->st->st_size != 0) {
@@ -131,34 +131,35 @@ int ramdisk_unlink(const char *path) {
 }
 
 int ramdisk_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
-    int path_length = strlen(path);
-    char _path[path_length];
+    char _path[MAX_PATH_LENGTH];
     strcpy(_path, path);
-    char dir_path[path_length];
+    char dir_path[MAX_PATH_LENGTH];
+
     char *last_slash = strrchr(_path, '/');
     char *file_name = last_slash + 1;
     *last_slash = 0;
+
     if (strlen(_path) == 0) {
         strcpy(dir_path, "/");
     } else {
         strcpy(dir_path, _path);
     }
+
     Node *node = get_node_by_path(dir_path);
     if (node == NULL) {
         return -ENOENT;
     }
+
     Node *tmp_node;
     int msg = hashmap_get(node->_map, file_name, (void **) (&tmp_node));
     if (msg == MAP_OK) {
         return -EEXIST;
     }
+
     Node *new_node = (Node *) malloc(sizeof(Node));
     new_node->st = (struct stat *) malloc(sizeof(struct stat));
     new_node->name = malloc(MAX_FILENAME_LENGTH * sizeof(char));
     strcpy(new_node->name, file_name);
-
-    long size_of_file = sizeof(Node) + sizeof(struct stat);
-
     new_node->st->st_mode = S_IFREG | mode;
     new_node->st->st_nlink = 1;
     new_node->st->st_size = 0;
@@ -179,6 +180,7 @@ int ramdisk_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
     hashmap_put(node->_map, new_node->name, new_node);
 
     size_t old_size = node->st->st_size;
+    long size_of_file = sizeof(Node) + sizeof(struct stat);
     long updated_size = old_size + size_of_file;
     node->st->st_size = updated_size;
 
@@ -186,10 +188,9 @@ int ramdisk_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
 }
 
 int ramdisk_mkdir(const char *path, mode_t mode) {
-    int path_length = strlen(path);
-    char _path[path_length];
+    char _path[MAX_PATH_LENGTH];
     strcpy(_path, path);
-    char dir_path[path_length];
+    char dir_path[MAX_PATH_LENGTH];
     char *last_slash = strrchr(_path, '/');
     char *dir_name = last_slash + 1;
     *last_slash = 0;
@@ -298,20 +299,17 @@ int ramdisk_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t o
 }
 
 int ramdisk_getattr(const char *path, struct stat *stbuf) {
-    int result = SUCCESS;
     Node *node = get_node_by_path(path);
-    if (node != NULL) {
-        stbuf->st_nlink = node->st->st_nlink;
-        stbuf->st_mode = node->st->st_mode;
-        stbuf->st_size = node->st->st_size;
-        stbuf->st_mtime = node->st->st_mtime;
-        stbuf->st_ctime = node->st->st_ctime;
-
-        result = 0;
-    } else {
-        result = -ENOENT;
+    if (node == NULL){
+        return -ENOENT;
     }
-    return result;
+
+    stbuf->st_nlink = node->st->st_nlink;
+    stbuf->st_mode = node->st->st_mode;
+    stbuf->st_size = node->st->st_size;
+    stbuf->st_mtime = node->st->st_mtime;
+    stbuf->st_ctime = node->st->st_ctime;
+    return SUCCESS;
 }
 
 int ramdisk_release(const char *path, struct fuse_file_info *fi) {
