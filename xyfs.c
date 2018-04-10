@@ -21,7 +21,6 @@ Node *root;
 
 Node *get_fs_object(const char *path)
 {
-    printf("Get Node at path : %s\n", path);
     int path_length = strlen(path);
 	char tmp_path[path_length];
 	strcpy(tmp_path, path);
@@ -35,13 +34,13 @@ Node *get_fs_object(const char *path)
 	{
 		path_token = strtok(tmp_path,"/");
 		node = root;
-		Node* fs_object_tmp;
+		Node* tmp_node;
 		while(path_token != NULL)
 		{
-            int msg = hashmap_get(node->_map, path_token, (void**)(&fs_object_tmp));
+            int msg = hashmap_get(node->_map, path_token, (void**)(&tmp_node));
             if(msg == MAP_OK)
             {
-                node = fs_object_tmp;
+                node = tmp_node;
 				path_token = strtok(NULL, "/");
             }
             else
@@ -122,24 +121,24 @@ Node *get_fs_object(const char *path)
         	if(size > 0)
         	{
         		size_t content_size = node->st->st_size;
-	        	if(content_size == 0) // write from the beginning of the file
+	        	if(content_size == 0)
 	            {
 	                node->content = (char *)malloc(sizeof(char) * size);
 	                offset = 0;
 	                memcpy(node->content + offset, buf, size);
 	                node->st->st_size = offset + size;
 
-	                // change modified time
+
 	                time_t current_time;
 	                time(&current_time);
 	                node->st->st_mtime = current_time;
 	                
-	                // update available size
+
 	                available_size = available_size - size;
 
 	                result = size;
 	            }
-	            else if(content_size != 0) // append new contents to file
+	            else if(content_size != 0)
 	            {
 	                if(offset > content_size)
 	                {
@@ -151,12 +150,12 @@ Node *get_fs_object(const char *path)
                     memcpy(node->content + offset, buf, size);
                     node->st->st_size = new_size;
                     
-                    // change access time and modified time
+
                     time_t current_time;
                     time(&current_time);
                     node->st->st_mtime = current_time;
 
-                    // update available size
+
                     available_size = available_size + content_size - new_size;
                     
                     result = size;
@@ -198,7 +197,7 @@ Node *get_fs_object(const char *path)
         free(node->st);
         free(node);
 
-        long size_of_file = sizeof(Node) + sizeof(struct stat); // size required to store info about file
+        long size_of_file = sizeof(Node) + sizeof(struct stat);
 
         updated_size = updated_size - size_of_file;
         if(updated_size < 0)
@@ -237,8 +236,8 @@ Node *get_fs_object(const char *path)
 	Node* node = get_fs_object(dir_path);
     if(node != NULL)
     {
-    	Node* fs_object_tmp;
-    	int msg = hashmap_get(node->_map, file_name, (void**)(&fs_object_tmp));
+    	Node* tmp_node;
+    	int msg = hashmap_get(node->_map, file_name, (void**)(&tmp_node));
         if(msg == MAP_OK)
         {
             return -EEXIST;
@@ -249,13 +248,13 @@ Node *get_fs_object(const char *path)
 	    }
         else
         {
-        	// create new file structure
+
         	Node *fs_object_new = (Node *)malloc(sizeof(Node));
 	        fs_object_new->st = (struct stat *)malloc(sizeof(struct stat));
 	        fs_object_new->name = malloc(FILENAME_SIZE * sizeof(char));
 	        strcpy(fs_object_new->name, file_name);
 
-	        long size_of_file = sizeof(Node) + sizeof(struct stat); // size required to store info about file
+	        long size_of_file = sizeof(Node) + sizeof(struct stat);
             
             fs_object_new->st->st_mode = S_IFREG | mode;
             fs_object_new->st->st_nlink = 1;
@@ -271,7 +270,7 @@ Node *get_fs_object(const char *path)
             fs_object_new->content = NULL;
             fs_object_new->type = IS_FILE;
             
-            // add new file to parent
+
             if(node->_map == NULL)
             {
                 node->_map = hashmap_new();
@@ -315,8 +314,8 @@ Node *get_fs_object(const char *path)
 	Node* node = get_fs_object(dir_path);
     if(node != NULL)
     {
-    	Node* fs_object_tmp;
-    	int msg = hashmap_get(node->_map, dir_name, (void**)(&fs_object_tmp));
+    	Node* tmp_node;
+    	int msg = hashmap_get(node->_map, dir_name, (void**)(&tmp_node));
         if(msg == MAP_OK)
         {
             return -EEXIST;
@@ -327,13 +326,13 @@ Node *get_fs_object(const char *path)
         }
         else
         {
-        	// creating new dir structure
+
             Node *fs_object_new = (Node *)malloc(sizeof(Node));
             fs_object_new->st = (struct stat *)malloc( sizeof(struct stat) );
         	fs_object_new->name = malloc(FILENAME_SIZE * sizeof(char));
         	strcpy(fs_object_new->name, dir_name);
 
-            long size_of_dir = sizeof(Node) + sizeof(struct stat); // size required to store info about dir
+            long size_of_dir = sizeof(Node) + sizeof(struct stat);
 
             fs_object_new->st->st_nlink = 2;
             fs_object_new->st->st_mode = S_IFDIR | mode;
@@ -348,7 +347,7 @@ Node *get_fs_object(const char *path)
             fs_object_new->_map = hashmap_new();
             fs_object_new->type = IS_DIRECTORY;
 
-            // adding new dir to parent
+
             if(node->_map == NULL)
             {
                 node->_map = hashmap_new();
@@ -389,7 +388,7 @@ Node *get_fs_object(const char *path)
         hashmap_free(node->_map);
         free(node);
 
-        long size_of_dir = sizeof(Node) + sizeof(struct stat); // size required to store info about dir
+        long size_of_dir = sizeof(Node) + sizeof(struct stat);
 
         size_t old_size = fs_object_parent_ptr->st->st_size;
         long updated_size = old_size - size_of_dir;
@@ -431,7 +430,7 @@ Node *get_fs_object(const char *path)
     {
         filler(buf, ".", NULL, 0);
         filler(buf, "..", NULL, 0);
-        Node *fs_object_tmp;
+        Node *tmp_node;
         int map_size = hashmap_length(node->_map);
         char* keys[map_size];
         int numKeys = hashmap_keys(node->_map, keys);
@@ -539,9 +538,6 @@ static struct fuse_operations ramdisk_operations =
     .utime = ramdisk_utime
 };
 
-/*
-	# Initialize Root
-*/
 void intialize_root()
 {
 	root = (Node *)malloc(sizeof(Node));
@@ -549,7 +545,7 @@ void intialize_root()
 	root->name = malloc(FILENAME_SIZE * sizeof(char));
 	strcpy(root->name, "/");
 
-	long size_of_dir = sizeof(Node) + sizeof(struct stat); // size required to store info about dir
+	long size_of_dir = sizeof(Node) + sizeof(struct stat);
 
     root->st->st_mode = S_IFDIR | 0755;
 	root->st->st_nlink = 2;
@@ -563,13 +559,9 @@ void intialize_root()
 	root->content = NULL;
 	root->type = IS_DIRECTORY;
 
-	// update available memory size
 	available_size = available_size - size_of_dir;
 }
 
-/*
-	# Main Function
-*/
 int main(int argc, char *argv[])
 {
 	if(argc < 3 || argc > 4)
@@ -587,7 +579,7 @@ int main(int argc, char *argv[])
 		argv[3] = NULL;
 		argc--;
 	}
-	fs_size = atol(argv[2]) * 1024 * 1024; //converting to MB
+	fs_size = atol(argv[2]) * 1024 * 1024;
 	available_size = fs_size;
 	if(fs_size < 1)
 	{
